@@ -73,7 +73,7 @@ setInterval(() => {
 /* Car Control */
 function Move(direction) {
     setInterval(() => {
-        motorSpeed.pwmWrite(dutyCycle);
+        motorSpeed.pwmWrite(acceleration);
         acceleration += 5;
         if (acceleration > 255) {
             acceleration = 0;
