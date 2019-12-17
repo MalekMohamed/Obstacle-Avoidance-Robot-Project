@@ -18,14 +18,14 @@ const trigerPinLeft = new Gpio(21, {mode: Gpio.OUTPUT});
 const adxl345 = new ADXL345(); // defaults to i2cBusNo 1, i2cAddress 0x53
 /* Constant Values */
 const MICROSECDONDS_PER_CM = 1e6 / 34321;
-const maxRange = 5;
-let acceleration = 5;
+const maxRange = 10;
+let acceleration = 10;
 let sensors = {Right: 0, Left: 0, Middle: 0};
 /* Initializing */
 trigerPinRight.digitalWrite(0);
 trigerPinMiddle.digitalWrite(0);
 trigerPinLeft.digitalWrite(0);
-let Flag = false;
+let Flag = true;
 /* Listen Function from pigpio lib */
 const watch = (Sensor, position) => {
     let startTick;
@@ -72,26 +72,39 @@ watch(SensorRight, 'Right');
 
 /* Void Loop */
 setInterval(() => {
+
+    if (Flag == true) {
+        Move('forward');
+    }
+    setTimeout(function() {
+        Flag = false;
+    },1500);
     process.stdout.write('\x1Bc');
     getAcceleration();
     for (var Position in sensors) {
         console.log(Position + " Sensor: " + sensors[Position]);
     }
-    if(sensors.pitch <= 5 && sensors.roll <= 5) {
+    if(sensors.roll >= 10 || sensors.roll <= -10) {
         console.log('Spinning');
         Move('left');
     } else {
         if (sensors.Right >= maxRange && sensors.Left >= maxRange && sensors.Middle >= maxRange) {
             Move('forward');
         }
-        if (sensors.Middle < maxRange) {
-            if (sensors.Left > sensors.Right) {
+        else if (sensors.Middle < maxRange) {
+            if ( sensors.Middle < maxRange && sensors.Right < maxRange && sensors.Left < maxRange)  {
+                Move('backward');
+            }
+            else if (sensors.Left > sensors.Right) {
                 Move('left');
             } else if (sensors.Right > sensors.Left) {
                 Move('right');
-            } else {
-                Move('backward');
             }
+        }
+        else if (sensors.Left > maxRange) {
+            Move('right');
+        } else if (sensors.Right > sensors.Left) {
+            Move('right');
         }
 
     }
@@ -103,14 +116,8 @@ setInterval(() => {
 
 /* Car Control */
 function Move(direction) {
-    setInterval(() => {
-        motorSpeed.pwmWrite(acceleration);
-        acceleration += 5;
-        if (acceleration > 255) {
-            acceleration = 0;
-        }
-    }, 10);
-    if (direction == 'forward') {
+    motorSpeed.pwmWrite(255);
+    /*if (direction == 'forward') {
         motorA1.digitalWrite(1);
         motorA2.digitalWrite(0);
         motorB1.digitalWrite(1);
@@ -130,7 +137,7 @@ function Move(direction) {
         motorA2.digitalWrite(0);
         motorB1.digitalWrite(0);
         motorB2.digitalWrite(1);
-    }
+    }*/
     console.log('Current: '+direction);
 }
 function numberMapping(value, low1, high1, low2, high2) {
@@ -138,7 +145,7 @@ function numberMapping(value, low1, high1, low2, high2) {
 }
 /* Set Sensors values to empty Object */
 function loop(distance, position) {
-    if (distance <= 100) {
+    if (distance <= 300 && distance > 0) {
         switch (position) {
             case 'Right':
                 sensors.Right = distance;
